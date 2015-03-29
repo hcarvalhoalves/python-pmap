@@ -2,12 +2,14 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="pmap",
+    name="python-pmap",
+    description="Clojure's pmap implementation for Python.",
+    long_description = open("README.md").read(),
     author="Henrique Carvalho Alves",
     author_email="hcarvalhoalves@gmail.com",
     package_dir={'': 'src'},
     packages=find_packages('src'),
-    version="1.0.0",
+    version="1.0.1",
     install_requires=[],
     dependency_links=[],
     include_package_data=True,
