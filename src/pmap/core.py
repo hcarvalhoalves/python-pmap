@@ -1,5 +1,4 @@
 import sys
-import time
 import contextlib
 import itertools
 import multiprocessing
@@ -12,7 +11,7 @@ _num_cores = multiprocessing.cpu_count
 @contextlib.contextmanager
 def threaded(*args, **kwargs):
     t = threading.Thread(*args, **kwargs)
-    t.daemon = True     # Allow terminating by killing the parent with ^C
+    t.daemon = True  # Allow terminating by killing the parent with ^C
     t.start()
     try:
         yield
@@ -47,24 +46,28 @@ class Future(object):
 
     https://en.wikipedia.org/wiki/Futures_and_promises
     """
+
     def __init__(self, func):
-        self.e = None
+        self.value = None
+        self.exc_info = None
         self.done = threading.Event()
+
         def wrapper():
             try:
                 self.value = func()
             except Exception as e:
-                self.e = e
+                self.exc_info = sys.exc_info()
             finally:
                 self.done.set()
+
         self.thread = threading.Thread(target=wrapper)
         self.thread.daemon = True
         self.thread.start()
 
     def deref(self):
         self.done.wait()
-        if self.e:
-            raise self.e.__class__, self.e, sys.exc_info()[2]
+        if self.exc_info:
+            raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
         return self.value
 
 

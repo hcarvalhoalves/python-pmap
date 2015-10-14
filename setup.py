@@ -10,9 +10,8 @@ setup(
     url="https://github.com/hcarvalhoalves/python-pmap",
     package_dir={'': 'src'},
     packages=find_packages('src'),
-    version="1.0.2",
+    version="1.0.3",
     install_requires=[],
     dependency_links=[],
     include_package_data=True,
-    zip_safe=False,
-    test_suite = "pmap.tests")
+    zip_safe=False)
