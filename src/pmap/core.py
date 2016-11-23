@@ -1,102 +1,95 @@
-import sys
-import contextlib
-import itertools
 import multiprocessing
+import multiprocessing.pool
+import sys
 import threading
-import Queue
 
-_num_cores = multiprocessing.cpu_count
-
-
-@contextlib.contextmanager
-def threaded(*args, **kwargs):
-    t = threading.Thread(*args, **kwargs)
-    t.daemon = True  # Allow terminating by killing the parent with ^C
-    t.start()
-    try:
-        yield
-    finally:
-        t.join()
+from itertools import imap
 
 
-def seque(seq):
+class Deferred(object):
     """
-    Consume seq in a separate thread, passing it to the calling
-    thread in a queue.
-    """
-    DONE = "_________XXXX___________DONE_ZZ"
-    q = Queue.Queue()
+    Construct the equivalent of a delayed `func`, delaying exceptions until `.deref()`.
+    If `func` failed, re-throws with original traceback on `.deref()`.
 
-    def wrapper():
-        for el in seq:
-            q.put(el)
-        q.put(DONE)
-
-    with threaded(target=wrapper):
-        while True:
-            el = q.get()
-            if el == DONE:
-                break
-            yield el
-
-
-class Future(object):
-    """
-    Futures implementation.
-
-    https://en.wikipedia.org/wiki/Futures_and_promises
+    Example:
+        >>> Deferred(lambda x: x * 2)(2).deref()
+        4
     """
 
     def __init__(self, func):
-        self.value = None
-        self.exc_info = None
-        self.done = threading.Event()
+        self.func = func
 
-        def wrapper():
-            try:
-                self.value = func()
-            except Exception as e:
-                self.exc_info = sys.exc_info()
-            finally:
-                self.done.set()
-
-        self.thread = threading.Thread(target=wrapper)
-        self.thread.daemon = True
-        self.thread.start()
+    def __call__(self, *args, **kwargs):
+        try:
+            self.value, self.exc_info = self.func(*args, **kwargs), None
+        except Exception as e:
+            self.value, self.exc_info = None, sys.exc_info()
+        return self
 
     def deref(self):
-        self.done.wait()
+        # Allows calling without arguments if not called explicitly before deref
+        if not hasattr(self, 'value'):
+            self.__call__()
         if self.exc_info:
             raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
         return self.value
 
 
-def partition_all(n, seq):
+class Future(object):
     """
-    Partition `seq` in blocks of `n` elements.
+    Futures implementation.
+    https://en.wikipedia.org/wiki/Futures_and_promises
+
+    Will spawn a Thread for each instance, unless a pool is specified.
+
+    This object is mostly useful for I/O-bound tasks, or if the passed func knows how to release the GIL
+    (https://wiki.python.org/moin/GlobalInterpreterLock) efficiently for CPU-bound tasks.
+
+    Example:
+        >>> import time
+        >>> Future(lambda x: time.sleep(x) and x)(1).deref(timeout=2)
+        1
+
     """
-    it = iter(seq)
-    while True:
-        block = list(itertools.islice(it, n))
-        if not block:
-            break
-        yield block
+
+    def __init__(self, func, pool=None):
+        self.func = func
+        self.done = None
+        self.pool = pool or multiprocessing.pool.ThreadPool()
+
+    def __call__(self, *args, **kwargs):
+        self.done = threading.Event()
+        self.pool.apply_async(Deferred(self.func),
+                              args=args, kwds=kwargs, callback=self._set_result_and_done)
+        return self
+
+    def _set_result_and_done(self, deferred):
+        self.deferred = deferred
+        self.done.set()
+
+    def deref(self, timeout=None):
+        # Allows calling without arguments if not called explicitly before deref
+        if not self.done:
+            self.__call__()
+        if not self.done.wait(timeout):
+            raise multiprocessing.TimeoutError("{} timed out after {} second.".format(
+                self.func, timeout))
+        return self.deferred.deref()
 
 
-def pmap(f, seq, threads=None):
+def pmap(f, seq, threads=None, timeout=None):
     """
     Apply `f` to each element of `seq` in at most N `threads`.
-    
-    Returns a generator and yields as soon as results are available.
 
-    By default will spawn one thread per available core, but
-    for I/O bound tasks it's useful to define `threads = len(seq)`,
-    as long as `threads` < maximum number of threads per proc.
+    `f` is expected to be a one-arity function.
+
+    Returns a generator and yields as soon as results become available. Keeps ordering of original sequence.
+
+    By default will spawn one thread per available core, but for I/O bound tasks it might be useful to define
+    `threads` higher, to saturate throughput.
     """
-    threads = threads or _num_cores()
-    assert type(threads) == int
-    partitioned = partition_all(threads, seq)
-    for subseq in partitioned:
-        threads = list(map(lambda z: Future(lambda: f(z)), subseq))
-        for th in threads:
-            yield th.deref()
+    assert (threads is None) or (type(threads) is int)
+    assert (timeout is None) or (type(timeout) is int)
+    pool = multiprocessing.pool.ThreadPool(threads)
+    assert hasattr(pool, 'apply_async')
+    return (i.deref(timeout) for i in imap(Future(f, pool=pool), seq))
