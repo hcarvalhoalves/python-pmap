@@ -83,3 +83,11 @@ def test_pmap_raise_original_traceback():
         print frames
         assert frames[-1][2] == 'always_fail'
         assert frames[-1][3] == 'raise ValueError(x)'
+
+
+def test_pvalmap():
+    d = {'1': 1, '2': 2, '3': 3}
+    expected = {'1': 2, '2': 3, '3': 4}
+    result = pvalmap(lambda x: x+1, d)
+
+    assert dict(result) == expected

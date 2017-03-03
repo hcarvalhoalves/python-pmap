@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0]
+### New
+- `pvalmap` map the values of a dicionary
+
 ## [1.1.0]
 ### New
 - `Future` now takes a `pool` argument to specify a thread pool.

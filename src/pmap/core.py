@@ -3,7 +3,8 @@ import multiprocessing.pool
 import sys
 import threading
 
-from itertools import imap
+from itertools import imap, izip
+from toolz.compatibility import iterkeys, itervalues
 
 
 class Deferred(object):
@@ -93,3 +94,11 @@ def pmap(f, seq, threads=None, timeout=None):
     pool = multiprocessing.pool.ThreadPool(threads)
     assert hasattr(pool, 'apply_async')
     return (i.deref(timeout) for i in imap(Future(f, pool=pool), seq))
+
+
+def pvalmap(f, d, threads=None, timeout=None):
+    """
+    Apply pmap just to the values of a dictinary
+    """
+    valsmaped = pmap(f, itervalues(d), threads, timeout)
+    return izip(iterkeys(d), valsmaped)
