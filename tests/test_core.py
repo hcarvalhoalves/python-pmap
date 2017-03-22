@@ -63,16 +63,16 @@ def test_pmap():
     assert result == list(map(square, xrange(100)))
 
     def slow_square(x):
-        time.sleep(0.01)
+        time.sleep(1.0)
         return x ** 2
 
     # Slow fns scale sub-linear w/ respect to number of threads
     t0 = time.time()
-    result = list(pmap(slow_square, xrange(100), threads=100))
+    result = list(pmap(slow_square, xrange(10), threads=10))
     t1 = time.time()
-    assert t1 - t0 < 10.0
+    assert t1 - t0 < 1.1
     # Results keep ordering
-    assert result == list(map(square, xrange(100)))
+    assert result == list(map(square, xrange(10)))
 
 
 def test_pmap_raise_original_traceback():

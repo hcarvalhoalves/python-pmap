@@ -3,6 +3,7 @@ import multiprocessing.pool
 import sys
 import threading
 
+
 from itertools import imap, izip
 from toolz.compatibility import iterkeys, itervalues
 
@@ -93,7 +94,10 @@ def pmap(f, seq, threads=None, timeout=None):
     assert (timeout is None) or (type(timeout) is int)
     pool = multiprocessing.pool.ThreadPool(threads)
     assert hasattr(pool, 'apply_async')
-    return (i.deref(timeout) for i in imap(Future(f, pool=pool), seq))
+    # Instantiate all futures so work can start in background thread pool
+    fpool = [Future(f, pool=pool)(ele) for ele in seq]
+    # Return a lazy generator that will block for results as necessary
+    return (f.deref(timeout) for f in fpool)
 
 
 def pvalmap(f, d, threads=None, timeout=None):

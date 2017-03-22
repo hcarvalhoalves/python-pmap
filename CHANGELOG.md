@@ -4,6 +4,10 @@
 ### New
 - `pvalmap` map the values of a dicionary
 
+## [1.1.1]
+### Bugfix
+- `pmap` need to start work on thread pool unconditional of `deref` call.
+
 ## [1.1.0]
 ### New
 - `Future` now takes a `pool` argument to specify a thread pool.
