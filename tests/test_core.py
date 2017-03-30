@@ -88,6 +88,12 @@ def test_pmap_raise_original_traceback():
 def test_pvalmap():
     d = {'1': 1, '2': 2, '3': 3}
     expected = {'1': 2, '2': 3, '3': 4}
-    result = pvalmap(lambda x: x+1, d)
+    result = pvalmap(lambda x: x + 1, d)
+    assert result == expected
 
-    assert dict(result) == expected
+
+def test_pkeymap():
+    d = {'1': 1, '2': 2, '3': 3}
+    expected = {'01': 1, '02': 2, '03': 3}
+    result = pkeymap(lambda x: "0{}".format(x), d)
+    assert result == expected
