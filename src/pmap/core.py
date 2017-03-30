@@ -2,9 +2,7 @@ import multiprocessing
 import multiprocessing.pool
 import sys
 import threading
-
-
-from itertools import imap, izip
+from itertools import izip
 from toolz.compatibility import iterkeys, itervalues
 
 
@@ -89,6 +87,9 @@ def pmap(f, seq, threads=None, timeout=None):
 
     By default will spawn one thread per available core, but for I/O bound tasks it might be useful to define
     `threads` higher, to saturate throughput.
+
+    Use `timeout` argument to avoid blocking on an element of the sequence indefinitely. Will throw
+    `multiprocessing.TimeoutError` after the specified number of seconds.
     """
     assert (threads is None) or (type(threads) is int)
     assert (timeout is None) or (type(timeout) is int)
@@ -100,9 +101,29 @@ def pmap(f, seq, threads=None, timeout=None):
     return (f.deref(timeout) for f in fpool)
 
 
-def pvalmap(f, d, threads=None, timeout=None):
+def pvalmap(f, d, factory=dict, threads=None, timeout=None):
     """
-    Apply pmap just to the values of a dictinary
+    Apply `f` to each value of dictionary `d` and return a new dictionary.
+
+    Blocks until entire dictionary can be realized.
+
+    Takes a `factory` to allow a return type that implements `collections.MutableMapping` other than `dict`.
     """
-    valsmaped = pmap(f, itervalues(d), threads, timeout)
-    return izip(iterkeys(d), valsmaped)
+    rv = factory()
+    rv.update(
+        izip(iterkeys(d), pmap(f, itervalues(d), threads, timeout)))
+    return rv
+
+
+def pkeymap(f, d, factory=dict, threads=None, timeout=None):
+    """
+    Apply `f` to each key of dictionary `d` and return a new dictionary.
+
+    Blocks until entire dictionary can be realized.
+
+    Takes a `factory` to allow a return type that implements `collections.MutableMapping` other than `dict`.
+    """
+    rv = factory()
+    rv.update(
+        izip(pmap(f, iterkeys(d), threads, timeout), itervalues(d)))
+    return rv

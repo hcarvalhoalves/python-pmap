@@ -2,7 +2,7 @@
 
 ## [1.2.0]
 ### New
-- `pvalmap` map the values of a dicionary
+- `pvalmap` and `pkeymap` functions to map over the values and keys of a dictionary.
 
 ## [1.1.1]
 ### Bugfix
