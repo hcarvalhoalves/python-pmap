@@ -1,16 +1,15 @@
+# python-pmap
+
 [Clojure's pmap](https://clojuredocs.org/clojure.core/pmap) implementation for Python.
 
-### Usage
+Multi-threaded versions of the following high-order functions are available:
 
-```
-from pmap import pmap
+| fn              | equivalent to
+| -------------   | ---------------------
+| `pmap.pmap`     | `itertools.imap`
+| `pmap.pvalmap`  | `toolz.dictoolz.valmap`
+| `pmap.pkeymap`  | `toolz.dictoolz.keymap`
 
-def fn(ele):
-	return do_some_IO(ele)
+Package also includes `pmap.Deferred` and `pmap.Future` classes that may be generally useful.
 
-seq = xrange(10000)
-
-for result in pmap(fn, seq):
-	print result
-
-```
+See included `tests/` for usage examples.

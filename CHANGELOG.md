@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0]
+### New
+- `pvalmap` and `pkeymap` functions to map over the values and keys of a dictionary.
+
 ## [1.1.1]
 ### Bugfix
 - `pmap` need to start work on thread pool unconditional of `deref` call.

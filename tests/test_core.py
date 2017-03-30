@@ -83,3 +83,17 @@ def test_pmap_raise_original_traceback():
         print frames
         assert frames[-1][2] == 'always_fail'
         assert frames[-1][3] == 'raise ValueError(x)'
+
+
+def test_pvalmap():
+    d = {'1': 1, '2': 2, '3': 3}
+    expected = {'1': 2, '2': 3, '3': 4}
+    result = pvalmap(lambda x: x + 1, d)
+    assert result == expected
+
+
+def test_pkeymap():
+    d = {'1': 1, '2': 2, '3': 3}
+    expected = {'01': 1, '02': 2, '03': 3}
+    result = pkeymap(lambda x: "0{}".format(x), d)
+    assert result == expected

@@ -10,10 +10,11 @@ setup(
     url="https://github.com/hcarvalhoalves/python-pmap",
     package_dir={'': 'src'},
     packages=find_packages('src'),
-    version="1.1.1",
+    version="1.2.0",
     install_requires=[
         "pytest",
-        "pytest-xdist"
+        "pytest-xdist",
+        "toolz"
     ],
     dependency_links=[],
     include_package_data=True,
