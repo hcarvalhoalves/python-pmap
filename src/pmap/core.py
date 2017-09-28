@@ -2,7 +2,12 @@ import multiprocessing
 import multiprocessing.pool
 import sys
 import threading
-from itertools import izip
+
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
+from six import reraise as raise_
 from toolz.compatibility import iterkeys, itervalues
 
 
@@ -31,7 +36,7 @@ class Deferred(object):
         if not hasattr(self, 'value'):
             self.__call__()
         if self.exc_info:
-            raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
+            raise_(self.exc_info[0], self.exc_info[1], self.exc_info[2])
         return self.value
 
 
@@ -118,7 +123,7 @@ def pvalmap(f, d, factory=dict, threads=None, timeout=None):
     """
     rv = factory()
     rv.update(
-        izip(iterkeys(d), pmap(f, itervalues(d), threads, timeout)))
+        zip(iterkeys(d), pmap(f, itervalues(d), threads, timeout)))
     return rv
 
 
@@ -128,9 +133,10 @@ def pkeymap(f, d, factory=dict, threads=None, timeout=None):
 
     Blocks until entire dictionary can be realized.
 
-    Takes a `factory` to allow a return type that implements `collections.MutableMapping` other than `dict`.
+    Takes a `factory` to allow a return type that implements
+    `collections.MutableMapping` other than `dict`.
     """
     rv = factory()
     rv.update(
-        izip(pmap(f, iterkeys(d), threads, timeout), itervalues(d)))
+        zip(pmap(f, iterkeys(d), threads, timeout), itervalues(d)))
     return rv
