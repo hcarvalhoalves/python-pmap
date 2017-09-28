@@ -46,7 +46,7 @@ def test_future_timeout():
     f = Future(slow_future)
     try:
         f.deref(1)
-    except multiprocessing.TimeoutError as e:
+    except multiprocessing.TimeoutError:
         pass
 
 
