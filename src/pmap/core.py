@@ -2,7 +2,12 @@ import multiprocessing
 import multiprocessing.pool
 import sys
 import threading
-from itertools import izip
+
+try:
+    import itertools.izip as zip
+except ImportError:
+    pass
+from six import reraise as raise_
 from toolz.compatibility import iterkeys, itervalues
 
 
@@ -22,7 +27,7 @@ class Deferred(object):
     def __call__(self, *args, **kwargs):
         try:
             self.value, self.exc_info = self.func(*args, **kwargs), None
-        except Exception as e:
+        except Exception:
             self.value, self.exc_info = None, sys.exc_info()
         return self
 
@@ -31,7 +36,7 @@ class Deferred(object):
         if not hasattr(self, 'value'):
             self.__call__()
         if self.exc_info:
-            raise self.exc_info[0], self.exc_info[1], self.exc_info[2]
+            raise_(self.exc_info[0], self.exc_info[1], self.exc_info[2])
         return self.value
 
 
@@ -42,8 +47,10 @@ class Future(object):
 
     Will spawn a Thread for each instance, unless a pool is specified.
 
-    This object is mostly useful for I/O-bound tasks, or if the passed func knows how to release the GIL
-    (https://wiki.python.org/moin/GlobalInterpreterLock) efficiently for CPU-bound tasks.
+    This object is mostly useful for I/O-bound tasks, or if the passed func
+    knows how to release the GIL
+    (https://wiki.python.org/moin/GlobalInterpreterLock) efficiently for
+    CPU-bound tasks.
 
     Example:
         >>> import time
@@ -60,7 +67,8 @@ class Future(object):
     def __call__(self, *args, **kwargs):
         self.done = threading.Event()
         self.pool.apply_async(Deferred(self.func),
-                              args=args, kwds=kwargs, callback=self._set_result_and_done)
+                              args=args, kwds=kwargs,
+                              callback=self._set_result_and_done)
         return self
 
     def _set_result_and_done(self, deferred):
@@ -72,8 +80,8 @@ class Future(object):
         if not self.done:
             self.__call__()
         if not self.done.wait(timeout):
-            raise multiprocessing.TimeoutError("{} timed out after {} second.".format(
-                self.func, timeout))
+            raise multiprocessing.TimeoutError("{} timed out after {} second."
+                                               "".format(self.func, timeout))
         return self.deferred.deref()
 
 
@@ -83,13 +91,16 @@ def pmap(f, seq, threads=None, timeout=None):
 
     `f` is expected to be a one-arity function.
 
-    Returns a generator and yields as soon as results become available. Keeps ordering of original sequence.
+    Returns a generator and yields as soon as results become available. Keeps
+    ordering of original sequence.
 
-    By default will spawn one thread per available core, but for I/O bound tasks it might be useful to define
-    `threads` higher, to saturate throughput.
+    By default will spawn one thread per available core, but for I/O bound
+    tasks it might be useful to define `threads` higher, to saturate
+    throughput.
 
-    Use `timeout` argument to avoid blocking on an element of the sequence indefinitely. Will throw
-    `multiprocessing.TimeoutError` after the specified number of seconds.
+    Use `timeout` argument to avoid blocking on an element of the sequence
+    indefinitely. Will throw `multiprocessing.TimeoutError` after the specified
+    number of seconds.
     """
     assert (threads is None) or (type(threads) is int)
     assert (timeout is None) or (type(timeout) is int)
@@ -107,11 +118,12 @@ def pvalmap(f, d, factory=dict, threads=None, timeout=None):
 
     Blocks until entire dictionary can be realized.
 
-    Takes a `factory` to allow a return type that implements `collections.MutableMapping` other than `dict`.
+    Takes a `factory` to allow a return type that implements
+    `collections.MutableMapping` other than `dict`.
     """
     rv = factory()
     rv.update(
-        izip(iterkeys(d), pmap(f, itervalues(d), threads, timeout)))
+        zip(iterkeys(d), pmap(f, itervalues(d), threads, timeout)))
     return rv
 
 
@@ -121,9 +133,10 @@ def pkeymap(f, d, factory=dict, threads=None, timeout=None):
 
     Blocks until entire dictionary can be realized.
 
-    Takes a `factory` to allow a return type that implements `collections.MutableMapping` other than `dict`.
+    Takes a `factory` to allow a return type that implements
+    `collections.MutableMapping` other than `dict`.
     """
     rv = factory()
     rv.update(
-        izip(pmap(f, iterkeys(d), threads, timeout), itervalues(d)))
+        zip(pmap(f, iterkeys(d), threads, timeout), itervalues(d)))
     return rv

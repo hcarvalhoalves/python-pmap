@@ -1,6 +1,7 @@
+from __future__ import print_function
 import time
 import traceback
-
+from builtins import range
 from pmap.core import *
 
 
@@ -46,7 +47,7 @@ def test_future_timeout():
     f = Future(slow_future)
     try:
         f.deref(1)
-    except multiprocessing.TimeoutError as e:
+    except multiprocessing.TimeoutError:
         pass
 
 
@@ -56,11 +57,11 @@ def test_pmap():
 
     # Fast fns have negligible overhead
     t0 = time.time()
-    result = list(pmap(square, xrange(100)))
+    result = list(pmap(square, range(100)))
     t1 = time.time()
     assert t1 - t0 < 0.1
     # Results keep ordering
-    assert result == list(map(square, xrange(100)))
+    assert result == list(map(square, range(100)))
 
     def slow_square(x):
         time.sleep(1.0)
@@ -68,11 +69,11 @@ def test_pmap():
 
     # Slow fns scale sub-linear w/ respect to number of threads
     t0 = time.time()
-    result = list(pmap(slow_square, xrange(10), threads=10))
+    result = list(pmap(slow_square, range(10), threads=10))
     t1 = time.time()
     assert t1 - t0 < 1.1
     # Results keep ordering
-    assert result == list(map(square, xrange(10)))
+    assert result == list(map(square, range(10)))
 
 
 def test_pmap_raise_original_traceback():
@@ -80,7 +81,7 @@ def test_pmap_raise_original_traceback():
         list(pmap(always_fail, ['foo']))
     except ValueError:
         frames = traceback.extract_tb(sys.exc_info()[2])
-        print frames
+        print(frames)
         assert frames[-1][2] == 'always_fail'
         assert frames[-1][3] == 'raise ValueError(x)'
 
